@@ -1,4 +1,8 @@
 //
+//  BottomPullToRefreshView.m
+//  Juan Ignacio Sánchez Lara (juanignaciosl)
+//  based on...
+//
 //  PullToRefreshView.m
 //  Grant Paul (chpwn)
 //
@@ -7,7 +11,7 @@
 //  Created by Devin Doty on 10/14/09October14.
 //  Copyright 2009 enormego. All rights reserved.
 //
-// 
+//
 // The MIT License (MIT)
 // Copyright © 2012 Sonny Parlin, http://sonnyparlin.com
 // 
@@ -30,19 +34,20 @@
 //  THE SOFTWARE.
 //
 
-#import "PullToRefreshView.h"
+#import "BottomPullToRefreshView.h"
 
 #define TEXT_COLOR	 [UIColor colorWithRed:(87.0/255.0) green:(108.0/255.0) blue:(137.0/255.0) alpha:1.0]
 #define FLIP_ANIMATION_DURATION 0.18f
 
+#define PULL_INFO_HEIGHT 65.0f
 
-@interface PullToRefreshView (Private)
+@interface BottomPullToRefreshView (Private)
 
 @property (nonatomic, assign) PullToRefreshViewState state;
 
 @end
 
-@implementation PullToRefreshView
+@implementation BottomPullToRefreshView
 @synthesize delegate, scrollView;
 
 - (void)showActivity:(BOOL)shouldShow animated:(BOOL)animated {
@@ -61,7 +66,10 @@
 }
 
 - (id)initWithScrollView:(UIScrollView *)scroll {
-    CGRect frame = CGRectMake(0.0f, 0.0f - scroll.bounds.size.height, scroll.bounds.size.width, scroll.bounds.size.height);
+    //CGRect frame = CGRectMake(0.0f, 0.0f - scroll.bounds.size.height, scroll.bounds.size.width, scroll.bounds.size.height);
+    // TODO: refactor duplicated
+    int contentHeight = [self contentHeight];
+    CGRect frame = frame = CGRectMake(0.0f, contentHeight, scroll.bounds.size.width, PULL_INFO_HEIGHT);
     
     if ((self = [super initWithFrame:frame])) {
         scrollView = scroll;
@@ -70,7 +78,7 @@
 		self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 		self.backgroundColor = [UIColor colorWithRed:226.0/255.0 green:231.0/255.0 blue:237.0/255.0 alpha:1.0];
         
-		lastUpdatedLabel = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, frame.size.height - 30.0f, self.frame.size.width, 20.0f)];
+		lastUpdatedLabel = [[UILabel alloc] initWithFrame:CGRectMake(10.0f, frame.size.height - 35.0f, self.frame.size.width, 20.0f)];
 		lastUpdatedLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 		lastUpdatedLabel.font = [UIFont systemFontOfSize:12.0f];
 		lastUpdatedLabel.textColor = TEXT_COLOR;
@@ -80,7 +88,7 @@
 		lastUpdatedLabel.textAlignment = UITextAlignmentCenter;
 		[self addSubview:lastUpdatedLabel];
         
-		statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, frame.size.height - 48.0f, self.frame.size.width, 20.0f)];
+		statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(10.0f, frame.size.height - 53.0f, self.frame.size.width, 20.0f)];
 		statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 		statusLabel.font = [UIFont boldSystemFontOfSize:13.0f];
 		statusLabel.textColor = TEXT_COLOR;
@@ -117,6 +125,10 @@
 #pragma mark -
 #pragma mark Setters
 
+- (void)setPullToRefreshEnabled:(BOOL)enabled {
+    [self setEnabled: enabled];
+}
+
 - (void)setEnabled:(BOOL)enabled
 {
 	if (enabled == _enabled)
@@ -140,22 +152,23 @@
     [formatter setLocale:[NSLocale currentLocale]];
     [formatter setDateStyle:NSDateFormatterMediumStyle];
     [formatter setTimeStyle:NSDateFormatterMediumStyle];
-    lastUpdatedLabel.text = [NSString stringWithFormat:@"Last Updated: %@", [formatter stringFromDate:date]];
+    lastUpdatedLabel.text = [NSString stringWithFormat:@"%@ %@", NSLocalizedString(@"Last Updated:", nil), [formatter stringFromDate:date]];
 }
 
 - (void)setState:(PullToRefreshViewState)state_ {
+    NSLog(@"State: %u", state_);
     state = state_;
     
 	switch (state) {
 		case PullToRefreshViewStateReady:
-			statusLabel.text = @"Release to refresh...";
+			statusLabel.text = NSLocalizedString(@"Release to refresh...", nil);
 			[self showActivity:NO animated:NO];
             [self setImageFlipped:YES];
             scrollView.contentInset = UIEdgeInsetsZero;
 			break;
             
 		case PullToRefreshViewStateNormal:
-			statusLabel.text = @"Pull down to refresh...";
+			statusLabel.text = NSLocalizedString(@"Pull up to refresh...", nil);
 			[self showActivity:NO animated:NO];
             [self setImageFlipped:NO];
 			[self refreshLastUpdatedDate];
@@ -163,7 +176,7 @@
 			break;
             
 		case PullToRefreshViewStateLoading:
-			statusLabel.text = @"Loading...";
+			statusLabel.text = NSLocalizedString(@"Loading...", nil);
 			[self showActivity:YES animated:YES];
             [self setImageFlipped:NO];
             scrollView.contentInset = UIEdgeInsetsMake(60.0f, 0.0f, 0.0f, 0.0f);
@@ -174,23 +187,41 @@
 	}
 }
 
+- (int) contentHeight {
+    UITableViewController *tableViewController = (UITableViewController*) self.delegate;
+    return tableViewController.tableView.contentSize.height;
+}
+
 #pragma mark -
 #pragma mark UIScrollView
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    float currentY = self.frame.origin.y;
+    int contentHeight = [self contentHeight];
+    if(currentY < contentHeight) {
+        self.frame = CGRectMake(0.0f, contentHeight, self.bounds.size.width, PULL_INFO_HEIGHT);
+    }
+    
+    int viewHeight = self.scrollView.bounds.size.height;
+    int offsetThreshold = contentHeight - viewHeight;
+    
     if ([keyPath isEqualToString:@"contentOffset"] && self.isEnabled) {
         if (scrollView.isDragging) {
+            //NSLog(@"Content offset: %f vs height: %u (%u - %u + %f)", scrollView.contentOffset.y, offsetThreshold, contentHeight, viewHeight, PULL_INFO_HEIGHT);
             if (state == PullToRefreshViewStateReady) {
-                if (scrollView.contentOffset.y > -65.0f && scrollView.contentOffset.y < 0.0f) 
+                if (scrollView.contentOffset.y > offsetThreshold && scrollView.contentOffset.y < offsetThreshold + PULL_INFO_HEIGHT) {
                     [self setState:PullToRefreshViewStateNormal];
+                }
             } else if (state == PullToRefreshViewStateNormal) {
-                if (scrollView.contentOffset.y < -65.0f)
+                if (scrollView.contentOffset.y > offsetThreshold+PULL_INFO_HEIGHT) {
                     [self setState:PullToRefreshViewStateReady];
+                }
             } else if (state == PullToRefreshViewStateLoading) {
-                if (scrollView.contentOffset.y >= 0)
+                if (scrollView.contentOffset.y >= offsetThreshold+0) {
                     scrollView.contentInset = UIEdgeInsetsZero;
-                else
-                    scrollView.contentInset = UIEdgeInsetsMake(MIN(-scrollView.contentOffset.y, 60.0f), 0, 0, 0);
+                } else {
+                    scrollView.contentInset = UIEdgeInsetsMake(MIN(-scrollView.contentOffset.y, offsetThreshold+60.0f), 0, 0, 0);
+                }
             }
         } else {
             if (state == PullToRefreshViewStateReady) {
@@ -198,8 +229,9 @@
                     [self setState:PullToRefreshViewStateLoading];
                 }];
                 
-                if ([delegate respondsToSelector:@selector(pullToRefreshViewShouldRefresh:)])
+                if ([delegate respondsToSelector:@selector(pullToRefreshViewShouldRefresh:)]) {
                     [delegate pullToRefreshViewShouldRefresh:self];
+                }
             }
         }
         self.frame = CGRectMake(scrollView.contentOffset.x, self.frame.origin.y, self.frame.size.width, self.frame.size.height);

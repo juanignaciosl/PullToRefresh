@@ -1,4 +1,8 @@
 //
+//  BottomPullToRefreshView.m
+//  Juan Ignacio Sánchez Lara (juanignaciosl)
+//  based on...
+//
 //  PullToRefreshView.h
 //  Grant Paul (chpwn)
 //
@@ -38,9 +42,9 @@ typedef enum {
 	PullToRefreshViewStateLoading
 } PullToRefreshViewState;
 
-@protocol PullToRefreshViewDelegate;
+@protocol BottomPullToRefreshViewDelegate;
 
-@interface PullToRefreshView : UIView {
+@interface BottomPullToRefreshView : UIView {
 	PullToRefreshViewState state;
     
 	UILabel *lastUpdatedLabel;
@@ -50,8 +54,10 @@ typedef enum {
 }
 
 @property (nonatomic, strong) UIScrollView *scrollView;
-@property (nonatomic, weak) id<PullToRefreshViewDelegate> delegate;
+@property (nonatomic, weak) id<BottomPullToRefreshViewDelegate> delegate;
 @property (nonatomic, assign, getter = isEnabled) BOOL enabled;
+
+- (void)setPullToRefreshEnabled:(BOOL)enabled;
 
 - (void)refreshLastUpdatedDate;
 - (void)finishedLoading;
@@ -61,9 +67,9 @@ typedef enum {
 
 @end
 
-@protocol PullToRefreshViewDelegate <NSObject>
+@protocol BottomPullToRefreshViewDelegate <NSObject>
 
 @optional
-- (void)pullToRefreshViewShouldRefresh:(PullToRefreshView *)view;
-- (NSDate *)pullToRefreshViewLastUpdated:(PullToRefreshView *)view;
+- (void)pullToRefreshViewShouldRefresh:(BottomPullToRefreshView *)view;
+- (NSDate *)pullToRefreshViewLastUpdated:(BottomPullToRefreshView *)view;
 @end
