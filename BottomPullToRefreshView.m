@@ -179,7 +179,7 @@
 			statusLabel.text = NSLocalizedString(@"Loading...", nil);
 			[self showActivity:YES animated:YES];
             [self setImageFlipped:NO];
-            scrollView.contentInset = UIEdgeInsetsMake(60.0f, 0.0f, 0.0f, 0.0f);
+            scrollView.contentInset = UIEdgeInsetsMake(0.0f, 0.0f, 60.0f, 0.0f);
 			break;
             
 		default:
